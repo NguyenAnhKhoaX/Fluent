@@ -7,10 +7,15 @@
 ██║░░░░░███████╗╚██████╔╝███████╗██║░╚███║░░░██║░░░  ██║░░░░░███████╗╚██████╔╝██████╔╝
 ╚═╝░░░░░╚══════╝░╚═════╝░╚══════╝╚═╝░░╚══╝░░░╚═╝░░░  ╚═╝░░░░░╚══════╝░╚═════╝░╚═════╝░
 
-A Modded version of Fluent
-NazuX discord : https://discord.gg/K2rCknb7
+A modified version of Fluent
+github.com/LongHip2012/FluentRemake | dsc.gg//lonelyhub
 
 ]]
+
+--- button
+local Show_Button = true
+local Button_Icon = ""
+---
 
 local Lighting = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
@@ -3078,7 +3083,7 @@ Components.Window = (function()
 
 		Window.TabDisplay = New("TextLabel", {
 			RichText = true,
-			Text = "NazuX hub",
+			Text = "Tab",
 			TextTransparency = 0,
 			FontFace = Font.new("rbxassetid://12187365364", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal),
 			TextSize = 28,
