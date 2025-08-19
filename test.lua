@@ -12,8 +12,8 @@ By AnhKhoa2279
 
 ]]
 --- button
-local Show_Button = true
-local Button_Icon = "rbxassetid://74725622037659"
+local Show_Button = false
+local Button_Icon = ""
 ---
 
 local Lighting = game:GetService("Lighting")
@@ -6827,3 +6827,4 @@ end)
 task.wait(0.01)
 
 return Library, SaveManager, InterfaceManager, Mobile
+
