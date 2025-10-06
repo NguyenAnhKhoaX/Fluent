@@ -42,6 +42,7 @@ local Themes = {
 		"Dark",
 		"Darker", 
 		"AMOLED",
+        "NazuX",
 		"Light",
 		"Balloon",
 		"SoftCream",
