@@ -1,0 +1,844 @@
+local Library = {}
+
+-- Colors và Themes
+local THEMES = {
+    Dark = {
+        Background = Color3.fromRGB(32, 32, 32),
+        Surface = Color3.fromRGB(42, 42, 42),
+        Text = Color3.fromRGB(255, 255, 255),
+        Accent = Color3.fromRGB(0, 120, 215),
+        Secondary = Color3.fromRGB(60, 60, 60),
+        Card = Color3.fromRGB(37, 37, 37)
+    },
+    Light = {
+        Background = Color3.fromRGB(240, 240, 240),
+        Surface = Color3.fromRGB(255, 255, 255),
+        Text = Color3.fromRGB(0, 0, 0),
+        Accent = Color3.fromRGB(0, 120, 215),
+        Secondary = Color3.fromRGB(230, 230, 230),
+        Card = Color3.fromRGB(250, 250, 250)
+    },
+    Purple = {
+        Background = Color3.fromRGB(40, 32, 64),
+        Surface = Color3.fromRGB(50, 42, 74),
+        Text = Color3.fromRGB(255, 255, 255),
+        Accent = Color3.fromRGB(188, 19, 254),
+        Secondary = Color3.fromRGB(60, 52, 84),
+        Card = Color3.fromRGB(45, 37, 69)
+    },
+    AMOLED = {
+        Background = Color3.fromRGB(0, 0, 0),
+        Surface = Color3.fromRGB(15, 15, 15),
+        Text = Color3.fromRGB(255, 255, 255),
+        Accent = Color3.fromRGB(0, 255, 163),
+        Secondary = Color3.fromRGB(25, 25, 25),
+        Card = Color3.fromRGB(10, 10, 10)
+    }
+}
+
+local currentTheme = "Dark"
+local tabs = {}
+local currentTab = nil
+local tabButtons = {}
+local Window = {}
+
+-- Function để cho phép kéo UI
+local function enableDrag(frame)
+    local dragToggle = nil
+    local dragInput = nil
+    local dragStart = nil
+    local startPos = nil
+
+    local function updateInput(input)
+        local delta = input.Position - dragStart
+        local position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        frame.Position = position
+    end
+
+    frame.InputBegan:Connect(function(input)
+        if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+            dragToggle = true
+            dragStart = input.Position
+            startPos = frame.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragToggle = false
+                end
+            end)
+        end
+    end)
+
+    frame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+
+    game:GetService("UserInputService").InputChanged:Connect(function(input)
+        if input == dragInput and dragToggle then
+            updateInput(input)
+        end
+    end)
+end
+
+-- Icon mapping
+local ICONS = {
+    user = "rbxassetid://3926305904",
+    home = "rbxassetid://3926305904",
+    settings = "rbxassetid://3926305904",
+    info = "rbxassetid://3926305904",
+    star = "rbxassetid://3926305904"
+}
+
+-- FluentPlus inspired functions
+function Window:AddTab(options)
+    local tab = {
+        Title = options.Title,
+        Icon = ICONS[options.Icon] or options.Icon,
+        Buttons = {},
+        Sections = {},
+        AddButton = function(self, buttonOptions)
+            return Library:AddButton(self, buttonOptions)
+        end,
+        AddToggle = function(self, toggleOptions)
+            return Library:AddToggle(self, toggleOptions)
+        end,
+        AddSlider = function(self, sliderOptions)
+            return Library:AddSlider(self, sliderOptions)
+        end
+    }
+    
+    table.insert(tabs, tab)
+    
+    -- Tạo nút tab ngay nếu UI đã được khởi tạo
+    if Library.TabContainer then
+        Library:CreateTabButton(tab)
+    end
+    
+    return tab
+end
+
+-- Hàm tạo nút tab với style FluentPlus
+function Library:CreateTabButton(tab)
+    local tabButton = Instance.new("TextButton")
+    tabButton.Name = tab.Title .. "Tab"
+    tabButton.Size = UDim2.new(1, -20, 0, 40)
+    tabButton.BackgroundTransparency = 1
+    tabButton.Text = ""
+    tabButton.AutoButtonColor = false
+    tabButton.LayoutOrder = #self.TabContainer:GetChildren()
+    
+    local tabContent = Instance.new("Frame")
+    tabContent.Name = "TabContent"
+    tabContent.Size = UDim2.new(1, 0, 1, 0)
+    tabContent.BackgroundTransparency = 1
+    tabContent.Parent = tabButton
+    
+    -- Icon cho tab
+    if tab.Icon then
+        local tabIcon = Instance.new("ImageLabel")
+        tabIcon.Name = "TabIcon"
+        tabIcon.Size = UDim2.new(0, 20, 0, 20)
+        tabIcon.Position = UDim2.new(0, 15, 0.5, -10)
+        tabIcon.BackgroundTransparency = 1
+        tabIcon.Image = tab.Icon
+        tabIcon.ImageColor3 = THEMES[currentTheme].Text
+        tabIcon.ImageTransparency = 0.4
+        tabIcon.Parent = tabContent
+    end
+    
+    local tabLabel = Instance.new("TextLabel")
+    tabLabel.Name = "TabLabel"
+    tabLabel.Size = UDim2.new(1, -50, 1, 0)
+    tabLabel.Position = UDim2.new(0, 45, 0, 0)
+    tabLabel.BackgroundTransparency = 1
+    tabLabel.Text = tab.Title
+    tabLabel.TextColor3 = THEMES[currentTheme].Text
+    tabLabel.TextTransparency = 0.4
+    tabLabel.TextSize = 14
+    tabLabel.Font = Enum.Font.GothamMedium
+    tabLabel.TextXAlignment = Enum.TextXAlignment.Left
+    tabLabel.Parent = tabContent
+    
+    -- Selection indicator
+    local selectionIndicator = Instance.new("Frame")
+    selectionIndicator.Name = "SelectionIndicator"
+    selectionIndicator.Size = UDim2.new(0, 3, 0, 20)
+    selectionIndicator.Position = UDim2.new(0, 0, 0.5, -10)
+    selectionIndicator.BackgroundColor3 = THEMES[currentTheme].Accent
+    selectionIndicator.BackgroundTransparency = 1
+    selectionIndicator.BorderSizePixel = 0
+    selectionIndicator.Parent = tabContent
+    
+    local selectionCorner = Instance.new("UICorner")
+    selectionCorner.CornerRadius = UDim.new(1, 0)
+    selectionCorner.Parent = selectionIndicator
+    
+    -- Hiệu ứng hover
+    tabButton.MouseEnter:Connect(function()
+        if currentTab ~= tab then
+            game:GetService("TweenService"):Create(tabLabel, TweenInfo.new(0.2), {TextTransparency = 0.2}):Play()
+            if tab.Icon then
+                game:GetService("TweenService"):Create(tabContent.TabIcon, TweenInfo.new(0.2), {ImageTransparency = 0.2}):Play()
+            end
+        end
+    end)
+    
+    tabButton.MouseLeave:Connect(function()
+        if currentTab ~= tab then
+            game:GetService("TweenService"):Create(tabLabel, TweenInfo.new(0.2), {TextTransparency = 0.4}):Play()
+            if tab.Icon then
+                game:GetService("TweenService"):Create(tabContent.TabIcon, TweenInfo.new(0.2), {ImageTransparency = 0.4}):Play()
+            end
+        end
+    end)
+    
+    tabButton.MouseButton1Click:Connect(function()
+        self:SwitchTab(tab)
+    end)
+    
+    tabButton.Parent = self.TabContainer
+    tabButtons[tab] = tabButton
+    
+    -- Tự động chọn tab đầu tiên
+    if not currentTab then
+        self:SwitchTab(tab)
+    end
+    
+    return tabButton
+end
+
+-- Create main screen GUI với FluentPlus design
+function Library:CreateMainScreen()
+    local Player = game:GetService("Players").LocalPlayer
+    local PlayerGui = Player:WaitForChild("PlayerGui")
+    
+    -- Main ScreenGui
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "FluentPlusUI"
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    ScreenGui.ResetOnSpawn = false
+    
+    -- Main Frame
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Name = "MainFrame"
+    MainFrame.Size = UDim2.new(0, 1000, 0, 650)
+    MainFrame.Position = UDim2.new(0.5, -500, 0.5, -325)
+    MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+    MainFrame.BackgroundColor3 = THEMES[currentTheme].Background
+    MainFrame.BackgroundTransparency = 0.05
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Active = true
+    MainFrame.Selectable = true
+
+    -- Glassmorphism effect
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(0, 12)
+    UICorner.Parent = MainFrame
+    
+    local UIStroke = Instance.new("UIStroke")
+    UIStroke.Color = Color3.fromRGB(255, 255, 255)
+    UIStroke.Thickness = 1
+    UIStroke.Transparency = 0.9
+    UIStroke.Parent = MainFrame
+    
+    -- Navigation Pane (bên trái)
+    local NavigationPane = Instance.new("Frame")
+    NavigationPane.Name = "NavigationPane"
+    NavigationPane.Size = UDim2.new(0, 220, 1, 0)
+    NavigationPane.Position = UDim2.new(0, 0, 0, 0)
+    NavigationPane.BackgroundColor3 = THEMES[currentTheme].Surface
+    NavigationPane.BackgroundTransparency = 0.05
+    NavigationPane.BorderSizePixel = 0
+    NavigationPane.Parent = MainFrame
+    
+    local NavCorner = Instance.new("UICorner")
+    NavCorner.CornerRadius = UDim.new(0, 12)
+    NavCorner.Parent = NavigationPane
+    
+    -- App Header
+    local AppHeader = Instance.new("Frame")
+    AppHeader.Name = "AppHeader"
+    AppHeader.Size = UDim2.new(1, 0, 0, 100)
+    AppHeader.Position = UDim2.new(0, 0, 0, 0)
+    AppHeader.BackgroundTransparency = 1
+    AppHeader.Parent = NavigationPane
+    
+    local AppTitle = Instance.new("TextLabel")
+    AppTitle.Name = "AppTitle"
+    AppTitle.Size = UDim2.new(1, -20, 0, 32)
+    AppTitle.Position = UDim2.new(0, 20, 0, 20)
+    AppTitle.BackgroundTransparency = 1
+    AppTitle.Text = "FluentPlus"
+    AppTitle.TextColor3 = THEMES[currentTheme].Text
+    AppTitle.TextSize = 24
+    AppTitle.Font = Enum.Font.GothamBold
+    AppTitle.TextXAlignment = Enum.TextXAlignment.Left
+    AppTitle.Parent = AppHeader
+    
+    local AppSubtitle = Instance.new("TextLabel")
+    AppSubtitle.Name = "AppSubtitle"
+    AppSubtitle.Size = UDim2.new(1, -20, 0, 20)
+    AppSubtitle.Position = UDim2.new(0, 20, 0, 55)
+    AppSubtitle.BackgroundTransparency = 1
+    AppSubtitle.Text = "v2.4.1"
+    AppSubtitle.TextColor3 = THEMES[currentTheme].Text
+    AppSubtitle.TextTransparency = 0.6
+    AppSubtitle.TextSize = 14
+    AppSubtitle.Font = Enum.Font.Gotham
+    AppSubtitle.TextXAlignment = Enum.TextXAlignment.Left
+    AppSubtitle.Parent = AppHeader
+    
+    -- Tab Container
+    local TabContainer = Instance.new("ScrollingFrame")
+    TabContainer.Name = "TabContainer"
+    TabContainer.Size = UDim2.new(1, -10, 1, -180)
+    TabContainer.Position = UDim2.new(0, 10, 0, 110)
+    TabContainer.BackgroundTransparency = 1
+    TabContainer.BorderSizePixel = 0
+    TabContainer.ScrollBarThickness = 0
+    TabContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
+    TabContainer.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    TabContainer.Parent = NavigationPane
+    
+    local TabListLayout = Instance.new("UIListLayout")
+    TabListLayout.Padding = UDim.new(0, 8)
+    TabListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    TabListLayout.Parent = TabContainer
+    
+    -- Content Area (bên phải)
+    local ContentArea = Instance.new("Frame")
+    ContentArea.Name = "ContentArea"
+    ContentArea.Size = UDim2.new(1, -230, 1, -20)
+    ContentArea.Position = UDim2.new(0, 230, 0, 10)
+    ContentArea.BackgroundTransparency = 1
+    ContentArea.Parent = MainFrame
+    
+    -- Content Header
+    local ContentHeader = Instance.new("Frame")
+    ContentHeader.Name = "ContentHeader"
+    ContentHeader.Size = UDim2.new(1, 0, 0, 80)
+    ContentHeader.Position = UDim2.new(0, 0, 0, 0)
+    ContentHeader.BackgroundTransparency = 1
+    ContentHeader.Parent = ContentArea
+    
+    local ContentTitle = Instance.new("TextLabel")
+    ContentTitle.Name = "ContentTitle"
+    ContentTitle.Size = UDim2.new(1, -40, 0, 40)
+    ContentTitle.Position = UDim2.new(0, 20, 0, 10)
+    ContentTitle.BackgroundTransparency = 1
+    ContentTitle.Text = "HOME"
+    ContentTitle.TextColor3 = THEMES[currentTheme].Text
+    ContentTitle.TextSize = 28
+    ContentTitle.Font = Enum.Font.GothamBold
+    ContentTitle.TextXAlignment = Enum.TextXAlignment.Left
+    ContentTitle.Parent = ContentHeader
+    
+    local ContentSubtitle = Instance.new("TextLabel")
+    ContentSubtitle.Name = "ContentSubtitle"
+    ContentSubtitle.Size = UDim2.new(1, -40, 0, 24)
+    ContentSubtitle.Position = UDim2.new(0, 20, 0, 50)
+    ContentSubtitle.BackgroundTransparency = 1
+    ContentSubtitle.Text = "Welcome to FluentPlus Interface"
+    ContentSubtitle.TextColor3 = THEMES[currentTheme].Text
+    ContentSubtitle.TextTransparency = 0.6
+    ContentSubtitle.TextSize = 16
+    ContentSubtitle.Font = Enum.Font.Gotham
+    ContentSubtitle.TextXAlignment = Enum.TextXAlignment.Left
+    ContentSubtitle.Parent = ContentHeader
+    
+    -- Content Frame
+    local ContentFrame = Instance.new("ScrollingFrame")
+    ContentFrame.Name = "ContentFrame"
+    ContentFrame.Size = UDim2.new(1, -20, 1, -100)
+    ContentFrame.Position = UDim2.new(0, 10, 0, 90)
+    ContentFrame.BackgroundTransparency = 1
+    ContentFrame.BorderSizePixel = 0
+    ContentFrame.ScrollBarThickness = 4
+    ContentFrame.ScrollBarImageColor3 = THEMES[currentTheme].Accent
+    ContentFrame.ScrollBarImageTransparency = 0.7
+    ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+    ContentFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    ContentFrame.Parent = ContentArea
+    
+    local ContentLayout = Instance.new("UIListLayout")
+    ContentLayout.Padding = UDim.new(0, 16)
+    ContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    ContentLayout.Parent = ContentFrame
+    
+    -- Buttons Container
+    local ButtonsContainer = Instance.new("Frame")
+    ButtonsContainer.Name = "ButtonsContainer"
+    ButtonsContainer.Size = UDim2.new(1, 0, 0, 0)
+    ButtonsContainer.BackgroundTransparency = 1
+    ButtonsContainer.Parent = ContentFrame
+    
+    local ButtonsLayout = Instance.new("UIListLayout")
+    ButtonsLayout.Padding = UDim.new(0, 12)
+    ButtonsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    ButtonsLayout.Parent = ButtonsContainer
+    
+    -- Theme Selector
+    local ThemeContainer = Instance.new("Frame")
+    ThemeContainer.Name = "ThemeContainer"
+    ThemeContainer.Size = UDim2.new(1, -20, 0, 50)
+    ThemeContainer.Position = UDim2.new(0, 10, 1, -70)
+    ThemeContainer.BackgroundColor3 = THEMES[currentTheme].Card
+    ThemeContainer.BackgroundTransparency = 0.1
+    ThemeContainer.BorderSizePixel = 0
+    ThemeContainer.Parent = NavigationPane
+    
+    local ThemeCorner = Instance.new("UICorner")
+    ThemeCorner.CornerRadius = UDim.new(0, 8)
+    ThemeCorner.Parent = ThemeContainer
+    
+    local ThemeButton = Instance.new("TextButton")
+    ThemeButton.Name = "ThemeButton"
+    ThemeButton.Size = UDim2.new(1, 0, 1, 0)
+    ThemeButton.BackgroundTransparency = 1
+    ThemeButton.Text = "🎨 Appearance"
+    ThemeButton.TextColor3 = THEMES[currentTheme].Text
+    ThemeButton.TextSize = 14
+    ThemeButton.Font = Enum.Font.GothamMedium
+    ThemeButton.Parent = ThemeContainer
+    
+    -- Window Controls
+    local WindowControls = Instance.new("Frame")
+    WindowControls.Name = "WindowControls"
+    WindowControls.Size = UDim2.new(0, 80, 0, 30)
+    WindowControls.Position = UDim2.new(1, -90, 0, 15)
+    WindowControls.BackgroundTransparency = 1
+    WindowControls.Parent = ContentHeader
+    
+    local CloseButton = Instance.new("TextButton")
+    CloseButton.Name = "CloseButton"
+    CloseButton.Size = UDim2.new(0, 30, 0, 30)
+    CloseButton.Position = UDim2.new(1, -35, 0, 0)
+    CloseButton.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+    CloseButton.BackgroundTransparency = 0.8
+    CloseButton.Text = "×"
+    CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    CloseButton.TextSize = 18
+    CloseButton.Font = Enum.Font.GothamBold
+    CloseButton.Parent = WindowControls
+    
+    local CloseCorner = Instance.new("UICorner")
+    CloseCorner.CornerRadius = UDim.new(0, 6)
+    CloseCorner.Parent = CloseButton
+    
+    CloseButton.MouseButton1Click:Connect(function()
+        ScreenGui:Destroy()
+    end)
+    
+    -- Parent everything
+    MainFrame.Parent = ScreenGui
+    ScreenGui.Parent = PlayerGui
+
+    -- Kích hoạt tính năng kéo cho MainFrame
+    enableDrag(MainFrame)
+    
+    return {
+        ScreenGui = ScreenGui,
+        MainFrame = MainFrame,
+        ContentFrame = ContentFrame,
+        ContentTitle = ContentTitle,
+        ContentSubtitle = ContentSubtitle,
+        TabContainer = TabContainer,
+        ThemeButton = ThemeButton,
+        ButtonsContainer = ButtonsContainer
+    }
+end
+
+-- Tab system
+function Library:SwitchTab(tab)
+    if currentTab then
+        -- Ẩn tất cả button của tab cũ
+        for _, button in ipairs(currentTab.Buttons) do
+            button.Visible = false
+        end
+        
+        -- Đặt lại màu tab cũ
+        if tabButtons[currentTab] then
+            local tabContent = tabButtons[currentTab]:FindFirstChild("TabContent")
+            if tabContent then
+                game:GetService("TweenService"):Create(tabContent.TabLabel, TweenInfo.new(0.2), {TextTransparency = 0.4}):Play()
+                if tabContent:FindFirstChild("TabIcon") then
+                    game:GetService("TweenService"):Create(tabContent.TabIcon, TweenInfo.new(0.2), {ImageTransparency = 0.4}):Play()
+                end
+                game:GetService("TweenService"):Create(tabContent.SelectionIndicator, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
+            end
+        end
+    end
+    
+    currentTab = tab
+    
+    -- Hiển thị button của tab mới
+    for _, button in ipairs(tab.Buttons) do
+        button.Visible = true
+    end
+    
+    -- Đổi màu tab đang active
+    if tabButtons[tab] then
+        local tabContent = tabButtons[tab]:FindFirstChild("TabContent")
+        if tabContent then
+            game:GetService("TweenService"):Create(tabContent.TabLabel, TweenInfo.new(0.2), {TextTransparency = 0}):Play()
+            if tabContent:FindFirstChild("TabIcon") then
+                game:GetService("TweenService"):Create(tabContent.TabIcon, TweenInfo.new(0.2), {ImageTransparency = 0}):Play()
+            end
+            game:GetService("TweenService"):Create(tabContent.SelectionIndicator, TweenInfo.new(0.2), {BackgroundTransparency = 0}):Play()
+        end
+    end
+    
+    -- Cập nhật content title theo tab
+    if self.ContentTitle then
+        self.ContentTitle.Text = string.upper(tab.Title)
+    end
+    if self.ContentSubtitle then
+        self.ContentSubtitle.Text = "Manage your " .. tab.Title .. " settings"
+    end
+end
+
+-- FluentPlus inspired Button function
+function Library:AddButton(tab, options)
+    local button = Instance.new("TextButton")
+    button.Name = options.Title .. "Button"
+    button.Size = UDim2.new(1, 0, 0, 70)
+    button.BackgroundColor3 = THEMES[currentTheme].Card
+    button.BackgroundTransparency = 0.1
+    button.BorderSizePixel = 0
+    button.Text = ""
+    button.AutoButtonColor = false
+    button.Visible = (tab == currentTab)
+    
+    if not self.ButtonsContainer then
+        warn("ButtonsContainer chưa được khởi tạo!")
+        return button
+    end
+    
+    button.Parent = self.ButtonsContainer
+    
+    local buttonCorner = Instance.new("UICorner")
+    buttonCorner.CornerRadius = UDim.new(0, 8)
+    buttonCorner.Parent = button
+    
+    -- Title
+    local buttonTitle = Instance.new("TextLabel")
+    buttonTitle.Name = "ButtonTitle"
+    buttonTitle.Size = UDim2.new(1, -40, 0, 24)
+    buttonTitle.Position = UDim2.new(0, 20, 0, 15)
+    buttonTitle.BackgroundTransparency = 1
+    buttonTitle.Text = options.Title
+    buttonTitle.TextColor3 = THEMES[currentTheme].Text
+    buttonTitle.TextSize = 16
+    buttonTitle.Font = Enum.Font.GothamMedium
+    buttonTitle.TextXAlignment = Enum.TextXAlignment.Left
+    buttonTitle.Parent = button
+    
+    -- Description
+    local buttonDescription = Instance.new("TextLabel")
+    buttonDescription.Name = "ButtonDescription"
+    buttonDescription.Size = UDim2.new(1, -40, 0, 20)
+    buttonDescription.Position = UDim2.new(0, 20, 0, 40)
+    buttonDescription.BackgroundTransparency = 1
+    buttonDescription.Text = options.Description or ""
+    buttonDescription.TextColor3 = THEMES[currentTheme].Text
+    buttonDescription.TextTransparency = 0.6
+    buttonDescription.TextSize = 14
+    buttonDescription.Font = Enum.Font.Gotham
+    buttonDescription.TextXAlignment = Enum.TextXAlignment.Left
+    buttonDescription.Parent = button
+    
+    local arrowIcon = Instance.new("ImageLabel")
+    arrowIcon.Name = "ArrowIcon"
+    arrowIcon.Size = UDim2.new(0, 16, 0, 16)
+    arrowIcon.Position = UDim2.new(1, -30, 0.5, -8)
+    arrowIcon.BackgroundTransparency = 1
+    arrowIcon.Image = "rbxassetid://3926305904"
+    arrowIcon.ImageRectOffset = Vector2.new(884, 284)
+    arrowIcon.ImageRectSize = Vector2.new(36, 36)
+    arrowIcon.ImageColor3 = THEMES[currentTheme].Text
+    arrowIcon.ImageTransparency = 0.4
+    arrowIcon.Parent = button
+    
+    -- Hover effects
+    button.MouseEnter:Connect(function()
+        game:GetService("TweenService"):Create(button, TweenInfo.new(0.2), {
+            BackgroundTransparency = 0.05
+        }):Play()
+        game:GetService("TweenService"):Create(arrowIcon, TweenInfo.new(0.2), {
+            ImageTransparency = 0.2
+        }):Play()
+    end)
+    
+    button.MouseLeave:Connect(function()
+        game:GetService("TweenService"):Create(button, TweenInfo.new(0.2), {
+            BackgroundTransparency = 0.1
+        }):Play()
+        game:GetService("TweenService"):Create(arrowIcon, TweenInfo.new(0.2), {
+            ImageTransparency = 0.4
+        }):Play()
+    end)
+    
+    button.MouseButton1Click:Connect(function()
+        if options.Callback then
+            options.Callback()
+        end
+    end)
+    
+    table.insert(tab.Buttons, button)
+    return button
+end
+
+-- Toggle function với FluentPlus style
+function Library:AddToggle(tab, options)
+    local toggle = Instance.new("TextButton")
+    toggle.Name = options.Title .. "Toggle"
+    toggle.Size = UDim2.new(1, 0, 0, 70)
+    toggle.BackgroundColor3 = THEMES[currentTheme].Card
+    toggle.BackgroundTransparency = 0.1
+    toggle.BorderSizePixel = 0
+    toggle.Text = ""
+    toggle.AutoButtonColor = false
+    toggle.Visible = (tab == currentTab)
+    
+    if not self.ButtonsContainer then
+        warn("ButtonsContainer chưa được khởi tạo!")
+        return toggle
+    end
+    
+    toggle.Parent = self.ButtonsContainer
+    
+    local toggleCorner = Instance.new("UICorner")
+    toggleCorner.CornerRadius = UDim.new(0, 8)
+    toggleCorner.Parent = toggle
+    
+    local toggleState = options.Default or false
+    
+    -- Toggle switch với Fluent design
+    local toggleSwitch = Instance.new("Frame")
+    toggleSwitch.Name = "ToggleSwitch"
+    toggleSwitch.Size = UDim2.new(0, 44, 0, 24)
+    toggleSwitch.Position = UDim2.new(1, -60, 0, 23)
+    toggleSwitch.BackgroundColor3 = THEMES[currentTheme].Secondary
+    toggleSwitch.BorderSizePixel = 0
+    toggleSwitch.Parent = toggle
+    
+    local switchCorner = Instance.new("UICorner")
+    switchCorner.CornerRadius = UDim.new(1, 0)
+    switchCorner.Parent = toggleSwitch
+    
+    local toggleKnob = Instance.new("Frame")
+    toggleKnob.Name = "ToggleKnob"
+    toggleKnob.Size = UDim2.new(0, 20, 0, 20)
+    toggleKnob.Position = UDim2.new(0, 2, 0.5, -10)
+    toggleKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    toggleKnob.BorderSizePixel = 0
+    toggleKnob.Parent = toggleSwitch
+    
+    local knobCorner = Instance.new("UICorner")
+    knobCorner.CornerRadius = UDim.new(1, 0)
+    knobCorner.Parent = toggleKnob
+    
+    -- Title
+    local toggleTitle = Instance.new("TextLabel")
+    toggleTitle.Name = "ToggleTitle"
+    toggleTitle.Size = UDim2.new(1, -100, 0, 24)
+    toggleTitle.Position = UDim2.new(0, 20, 0, 15)
+    toggleTitle.BackgroundTransparency = 1
+    toggleTitle.Text = options.Title
+    toggleTitle.TextColor3 = THEMES[currentTheme].Text
+    toggleTitle.TextSize = 16
+    toggleTitle.Font = Enum.Font.GothamMedium
+    toggleTitle.TextXAlignment = Enum.TextXAlignment.Left
+    toggleTitle.Parent = toggle
+    
+    -- Description
+    local toggleDescription = Instance.new("TextLabel")
+    toggleDescription.Name = "ToggleDescription"
+    toggleDescription.Size = UDim2.new(1, -100, 0, 20)
+    toggleDescription.Position = UDim2.new(0, 20, 0, 40)
+    toggleDescription.BackgroundTransparency = 1
+    toggleDescription.Text = options.Description or ""
+    toggleDescription.TextColor3 = THEMES[currentTheme].Text
+    toggleDescription.TextTransparency = 0.6
+    toggleDescription.TextSize = 14
+    toggleDescription.Font = Enum.Font.Gotham
+    toggleDescription.TextXAlignment = Enum.TextXAlignment.Left
+    toggleDescription.Parent = toggle
+    
+    local function updateToggle()
+        local tweenInfo = TweenInfo.new(0.2)
+        if toggleState then
+            game:GetService("TweenService"):Create(toggleSwitch, tweenInfo, {BackgroundColor3 = THEMES[currentTheme].Accent}):Play()
+            game:GetService("TweenService"):Create(toggleKnob, tweenInfo, {Position = UDim2.new(1, -22, 0.5, -10)}):Play()
+        else
+            game:GetService("TweenService"):Create(toggleSwitch, tweenInfo, {BackgroundColor3 = THEMES[currentTheme].Secondary}):Play()
+            game:GetService("TweenService"):Create(toggleKnob, tweenInfo, {Position = UDim2.new(0, 2, 0.5, -10)}):Play()
+        end
+    end
+    
+    toggle.MouseButton1Click:Connect(function()
+        toggleState = not toggleState
+        updateToggle()
+        if options.Callback then
+            options.Callback(toggleState)
+        end
+    end)
+    
+    -- Hover effects
+    toggle.MouseEnter:Connect(function()
+        game:GetService("TweenService"):Create(toggle, TweenInfo.new(0.2), {
+            BackgroundTransparency = 0.05
+        }):Play()
+    end)
+    
+    toggle.MouseLeave:Connect(function()
+        game:GetService("TweenService"):Create(toggle, TweenInfo.new(0.2), {
+            BackgroundTransparency = 0.1
+        }):Play()
+    end)
+    
+    updateToggle()
+    table.insert(tab.Buttons, toggle)
+    return toggle
+end
+
+-- Initialize library
+function Library:Init()
+    local mainScreen = self:CreateMainScreen()
+    self.ScreenGui = mainScreen.ScreenGui
+    self.MainFrame = mainScreen.MainFrame
+    self.ContentFrame = mainScreen.ContentFrame
+    self.ContentTitle = mainScreen.ContentTitle
+    self.ContentSubtitle = mainScreen.ContentSubtitle
+    self.TabContainer = mainScreen.TabContainer
+    self.ThemeButton = mainScreen.ThemeButton
+    self.ButtonsContainer = mainScreen.ButtonsContainer
+    
+    -- Tạo lại các tab button nếu có tab được tạo trước khi Init
+    for _, tab in ipairs(tabs) do
+        self:CreateTabButton(tab)
+    end
+    
+    -- Theme switching
+    local themeIndex = 1
+    local themeNames = {"Dark", "Light", "Purple", "AMOLED"}
+    
+    self.ThemeButton.MouseButton1Click:Connect(function()
+        themeIndex = (themeIndex % #themeNames) + 1
+        currentTheme = themeNames[themeIndex]
+        self.ThemeButton.Text = currentTheme == "AMOLED" and "🖤 AMOLED" 
+                              or currentTheme == "Purple" and "💜 Purple"
+                              or currentTheme == "Light" and "☀️ Light" 
+                              or "🌙 Dark"
+        self:ThemeUpdate()
+    end)
+    
+    return self
+end
+
+-- Theme update function
+function Library:ThemeUpdate()
+    local theme = THEMES[currentTheme]
+    
+    -- Main Frame
+    self.MainFrame.BackgroundColor3 = theme.Background
+    
+    -- Navigation Pane
+    local navigationPane = self.MainFrame:FindFirstChild("NavigationPane")
+    if navigationPane then
+        navigationPane.BackgroundColor3 = theme.Surface
+    end
+    
+    -- Theme Button Container
+    local themeContainer = self.ThemeButton.Parent
+    if themeContainer then
+        themeContainer.BackgroundColor3 = theme.Card
+    end
+    
+    -- Update Content
+    if self.ContentTitle then
+        self.ContentTitle.TextColor3 = theme.Text
+    end
+    if self.ContentSubtitle then
+        self.ContentSubtitle.TextColor3 = theme.Text
+    end
+    
+    -- Update tab buttons
+    for tab, tabButton in pairs(tabButtons) do
+        local tabContent = tabButton:FindFirstChild("TabContent")
+        if tabContent then
+            tabContent.TabLabel.TextColor3 = theme.Text
+            if tabContent:FindFirstChild("TabIcon") then
+                tabContent.TabIcon.ImageColor3 = theme.Text
+            end
+            tabContent.SelectionIndicator.BackgroundColor3 = theme.Accent
+            
+            -- Cập nhật trạng thái active
+            if currentTab == tab then
+                tabContent.TabLabel.TextTransparency = 0
+                if tabContent:FindFirstChild("TabIcon") then
+                    tabContent.TabIcon.ImageTransparency = 0
+                end
+                tabContent.SelectionIndicator.BackgroundTransparency = 0
+            else
+                tabContent.TabLabel.TextTransparency = 0.4
+                if tabContent:FindFirstChild("TabIcon") then
+                    tabContent.TabIcon.ImageTransparency = 0.4
+                end
+                tabContent.SelectionIndicator.BackgroundTransparency = 1
+            end
+        end
+    end
+    
+    -- Update tất cả các nút
+    for _, tab in pairs(tabs) do
+        for _, button in ipairs(tab.Buttons) do
+            if button:IsA("TextButton") and button.Parent then
+                button.BackgroundColor3 = theme.Card
+                
+                -- Update titles và descriptions
+                local buttonTitle = button:FindFirstChild("ButtonTitle") or button:FindFirstChild("ToggleTitle")
+                if buttonTitle then
+                    buttonTitle.TextColor3 = theme.Text
+                end
+                
+                local buttonDescription = button:FindFirstChild("ButtonDescription") or button:FindFirstChild("ToggleDescription")
+                if buttonDescription then
+                    buttonDescription.TextColor3 = theme.Text
+                end
+                
+                -- Update arrow icon
+                local arrowIcon = button:FindFirstChild("ArrowIcon")
+                if arrowIcon then
+                    arrowIcon.ImageColor3 = theme.Text
+                end
+                
+                -- Update toggle switch
+                local toggleSwitch = button:FindFirstChild("ToggleSwitch")
+                if toggleSwitch then
+                    local toggleKnob = toggleSwitch:FindFirstChild("ToggleKnob")
+                    if toggleKnob then
+                        local toggleState = toggleKnob.Position.X.Offset > 10
+                        if toggleState then
+                            toggleSwitch.BackgroundColor3 = theme.Accent
+                        else
+                            toggleSwitch.BackgroundColor3 = theme.Secondary
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+-- Hàm để sử dụng thư viện
+function Library:Load()
+    return self:Init()
+end
+
+-- Tạo global Window object
+getgenv().Window = Window
+
+return Library
