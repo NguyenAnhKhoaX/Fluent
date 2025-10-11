@@ -41,6 +41,7 @@ local tabs = {}
 local currentTab = nil
 local tabButtons = {}
 local Window = {}
+local Notifications = {}
 
 -- Function để cho phép kéo UI
 local function enableDrag(frame)
@@ -88,8 +89,217 @@ local ICONS = {
     home = "rbxassetid://3926305904",
     settings = "rbxassetid://3926305904",
     info = "rbxassetid://3926305904",
-    star = "rbxassetid://3926305904"
+    star = "rbxassetid://3926305904",
+    bell = "rbxassetid://3926305904",
+    check = "rbxassetid://3926305904",
+    warning = "rbxassetid://3926305904",
+    error = "rbxassetid://3926305904"
 }
+
+-- Notification system giống Orion UI
+function Library:CreateNotificationSystem()
+    local Player = game:GetService("Players").LocalPlayer
+    local PlayerGui = Player:WaitForChild("PlayerGui")
+    
+    local NotificationContainer = Instance.new("Frame")
+    NotificationContainer.Name = "NotificationContainer"
+    NotificationContainer.Size = UDim2.new(0, 350, 1, 0)
+    NotificationContainer.Position = UDim2.new(1, -370, 0, 10)
+    NotificationContainer.BackgroundTransparency = 1
+    NotificationContainer.Parent = self.MainFrame
+    
+    local NotificationList = Instance.new("UIListLayout")
+    NotificationList.Padding = UDim.new(0, 10)
+    NotificationList.SortOrder = Enum.SortOrder.LayoutOrder
+    NotificationList.HorizontalAlignment = Enum.HorizontalAlignment.Right
+    NotificationList.VerticalAlignment = Enum.VerticalAlignment.Bottom
+    NotificationList.Parent = NotificationContainer
+    
+    self.NotificationContainer = NotificationContainer
+end
+
+function Library:Notify(options)
+    if not self.NotificationContainer then
+        self:CreateNotificationSystem()
+    end
+    
+    local notification = Instance.new("Frame")
+    notification.Name = "Notification"
+    notification.Size = UDim2.new(0, 320, 0, 80)
+    notification.BackgroundColor3 = THEMES[currentTheme].Card
+    notification.BackgroundTransparency = 0.1
+    notification.BorderSizePixel = 0
+    notification.LayoutOrder = 999999 - #self.NotificationContainer:GetChildren()
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = notification
+    
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = THEMES[currentTheme].Accent
+    stroke.Thickness = 1
+    stroke.Transparency = 0.8
+    stroke.Parent = notification
+    
+    -- Title Bar
+    local titleBar = Instance.new("Frame")
+    titleBar.Name = "TitleBar"
+    titleBar.Size = UDim2.new(1, 0, 0, 30)
+    titleBar.BackgroundTransparency = 1
+    titleBar.Parent = notification
+    
+    -- Icon
+    local icon = Instance.new("ImageLabel")
+    icon.Name = "Icon"
+    icon.Size = UDim2.new(0, 20, 0, 20)
+    icon.Position = UDim2.new(0, 10, 0, 5)
+    icon.BackgroundTransparency = 1
+    icon.Image = options.Icon or ICONS.info
+    icon.ImageColor3 = options.Color or THEMES[currentTheme].Accent
+    icon.Parent = titleBar
+    
+    -- Title
+    local title = Instance.new("TextLabel")
+    title.Name = "Title"
+    title.Size = UDim2.new(1, -40, 1, 0)
+    title.Position = UDim2.new(0, 35, 0, 0)
+    title.BackgroundTransparency = 1
+    title.Text = options.Title or "Notification"
+    title.TextColor3 = THEMES[currentTheme].Text
+    title.TextSize = 14
+    title.Font = Enum.Font.GothamMedium
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = titleBar
+    
+    -- Close button
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.Name = "CloseButton"
+    closeBtn.Size = UDim2.new(0, 20, 0, 20)
+    closeBtn.Position = UDim2.new(1, -25, 0, 5)
+    closeBtn.BackgroundTransparency = 1
+    closeBtn.Text = "×"
+    closeBtn.TextColor3 = THEMES[currentTheme].Text
+    closeBtn.TextSize = 16
+    closeBtn.Font = Enum.Font.GothamBold
+    closeBtn.Parent = titleBar
+    
+    -- Content
+    local content = Instance.new("TextLabel")
+    content.Name = "Content"
+    content.Size = UDim2.new(1, -20, 0, 40)
+    content.Position = UDim2.new(0, 10, 0, 35)
+    content.BackgroundTransparency = 1
+    content.Text = options.Content or ""
+    content.TextColor3 = THEMES[currentTheme].Text
+    content.TextTransparency = 0.4
+    content.TextSize = 12
+    content.Font = Enum.Font.Gotham
+    content.TextWrapped = true
+    content.TextXAlignment = Enum.TextXAlignment.Left
+    content.TextYAlignment = Enum.TextYAlignment.Top
+    content.Parent = notification
+    
+    -- Progress bar (for duration)
+    local progressBar = Instance.new("Frame")
+    progressBar.Name = "ProgressBar"
+    progressBar.Size = UDim2.new(1, 0, 0, 3)
+    progressBar.Position = UDim2.new(0, 0, 1, -3)
+    progressBar.BackgroundColor3 = options.Color or THEMES[currentTheme].Accent
+    progressBar.BorderSizePixel = 0
+    progressBar.Parent = notification
+    
+    local progressCorner = Instance.new("UICorner")
+    progressCorner.CornerRadius = UDim.new(0, 0)
+    progressCorner.Parent = progressBar
+    
+    notification.Parent = self.NotificationContainer
+    
+    -- Animation
+    notification.Position = UDim2.new(1, 350, 1, -90)
+    notification.Visible = true
+    
+    local slideIn = game:GetService("TweenService"):Create(notification, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Position = UDim2.new(1, -330, 1, -90)
+    })
+    
+    slideIn:Play()
+    
+    -- Close functionality
+    local function closeNotification()
+        local slideOut = game:GetService("TweenService"):Create(notification, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Position = UDim2.new(1, 350, 1, -90)
+        })
+        
+        slideOut:Play()
+        slideOut.Completed:Wait()
+        notification:Destroy()
+    end
+    
+    closeBtn.MouseButton1Click:Connect(closeNotification)
+    
+    -- Auto close after duration
+    if options.Duration ~= 0 then
+        local duration = options.Duration or 5
+        local startTime = tick()
+        
+        local progressTween = game:GetService("TweenService"):Create(progressBar, TweenInfo.new(duration, Enum.EasingStyle.Linear), {
+            Size = UDim2.new(0, 0, 0, 3)
+        })
+        
+        progressTween:Play()
+        
+        delay(duration, function()
+            if notification.Parent then
+                closeNotification()
+            end
+        end)
+    end
+    
+    return {
+        Close = closeNotification
+    }
+end
+
+-- Helper functions for different notification types
+function Library:NotifySuccess(title, content, duration)
+    return self:Notify({
+        Title = title,
+        Content = content,
+        Duration = duration or 5,
+        Icon = ICONS.check,
+        Color = Color3.fromRGB(46, 204, 113)
+    })
+end
+
+function Library:NotifyWarning(title, content, duration)
+    return self:Notify({
+        Title = title,
+        Content = content,
+        Duration = duration or 5,
+        Icon = ICONS.warning,
+        Color = Color3.fromRGB(241, 196, 15)
+    })
+end
+
+function Library:NotifyError(title, content, duration)
+    return self:Notify({
+        Title = title,
+        Content = content,
+        Duration = duration or 5,
+        Icon = ICONS.error,
+        Color = Color3.fromRGB(231, 76, 60)
+    })
+end
+
+function Library:NotifyInfo(title, content, duration)
+    return self:Notify({
+        Title = title,
+        Content = content,
+        Duration = duration or 5,
+        Icon = ICONS.info,
+        Color = THEMES[currentTheme].Accent
+    })
+end
 
 -- FluentPlus inspired functions
 function Window:AddTab(options)
@@ -243,11 +453,52 @@ function Library:CreateMainScreen()
     UIStroke.Transparency = 0.9
     UIStroke.Parent = MainFrame
     
+    -- TITLE BAR - THÊM TITLE VÀ SUBTITLE VÀO ĐÂY
+    local TitleBar = Instance.new("Frame")
+    TitleBar.Name = "TitleBar"
+    TitleBar.Size = UDim2.new(1, 0, 0, 60)
+    TitleBar.Position = UDim2.new(0, 0, 0, 0)
+    TitleBar.BackgroundColor3 = THEMES[currentTheme].Surface
+    TitleBar.BackgroundTransparency = 0.1
+    TitleBar.BorderSizePixel = 0
+    TitleBar.Parent = MainFrame
+    
+    local TitleBarCorner = Instance.new("UICorner")
+    TitleBarCorner.CornerRadius = UDim.new(0, 12)
+    TitleBarCorner.Parent = TitleBar
+    
+    -- Title trong TitleBar
+    local MainTitle = Instance.new("TextLabel")
+    MainTitle.Name = "MainTitle"
+    MainTitle.Size = UDim2.new(0, 200, 0, 30)
+    MainTitle.Position = UDim2.new(0, 20, 0, 10)
+    MainTitle.BackgroundTransparency = 1
+    MainTitle.Text = "FluentPlus UI"
+    MainTitle.TextColor3 = THEMES[currentTheme].Text
+    MainTitle.TextSize = 20
+    MainTitle.Font = Enum.Font.GothamBold
+    MainTitle.TextXAlignment = Enum.TextXAlignment.Left
+    MainTitle.Parent = TitleBar
+    
+    -- Subtitle trong TitleBar
+    local MainSubtitle = Instance.new("TextLabel")
+    MainSubtitle.Name = "MainSubtitle"
+    MainSubtitle.Size = UDim2.new(0, 200, 0, 20)
+    MainSubtitle.Position = UDim2.new(0, 20, 0, 35)
+    MainSubtitle.BackgroundTransparency = 1
+    MainSubtitle.Text = "Premium Script Hub"
+    MainSubtitle.TextColor3 = THEMES[currentTheme].Text
+    MainSubtitle.TextTransparency = 0.6
+    MainSubtitle.TextSize = 14
+    MainSubtitle.Font = Enum.Font.Gotham
+    MainSubtitle.TextXAlignment = Enum.TextXAlignment.Left
+    MainSubtitle.Parent = TitleBar
+    
     -- Navigation Pane (bên trái)
     local NavigationPane = Instance.new("Frame")
     NavigationPane.Name = "NavigationPane"
-    NavigationPane.Size = UDim2.new(0, 220, 1, 0)
-    NavigationPane.Position = UDim2.new(0, 0, 0, 0)
+    NavigationPane.Size = UDim2.new(0, 220, 1, -70)
+    NavigationPane.Position = UDim2.new(0, 0, 0, 70)
     NavigationPane.BackgroundColor3 = THEMES[currentTheme].Surface
     NavigationPane.BackgroundTransparency = 0.05
     NavigationPane.BorderSizePixel = 0
@@ -257,10 +508,10 @@ function Library:CreateMainScreen()
     NavCorner.CornerRadius = UDim.new(0, 12)
     NavCorner.Parent = NavigationPane
     
-    -- App Header
+    -- App Header trong Navigation Pane
     local AppHeader = Instance.new("Frame")
     AppHeader.Name = "AppHeader"
-    AppHeader.Size = UDim2.new(1, 0, 0, 100)
+    AppHeader.Size = UDim2.new(1, 0, 0, 80)
     AppHeader.Position = UDim2.new(0, 0, 0, 0)
     AppHeader.BackgroundTransparency = 1
     AppHeader.Parent = NavigationPane
@@ -270,9 +521,9 @@ function Library:CreateMainScreen()
     AppTitle.Size = UDim2.new(1, -20, 0, 32)
     AppTitle.Position = UDim2.new(0, 20, 0, 20)
     AppTitle.BackgroundTransparency = 1
-    AppTitle.Text = "FluentPlus"
+    AppTitle.Text = "Navigation"
     AppTitle.TextColor3 = THEMES[currentTheme].Text
-    AppTitle.TextSize = 24
+    AppTitle.TextSize = 18
     AppTitle.Font = Enum.Font.GothamBold
     AppTitle.TextXAlignment = Enum.TextXAlignment.Left
     AppTitle.Parent = AppHeader
@@ -280,12 +531,12 @@ function Library:CreateMainScreen()
     local AppSubtitle = Instance.new("TextLabel")
     AppSubtitle.Name = "AppSubtitle"
     AppSubtitle.Size = UDim2.new(1, -20, 0, 20)
-    AppSubtitle.Position = UDim2.new(0, 20, 0, 55)
+    AppSubtitle.Position = UDim2.new(0, 20, 0, 50)
     AppSubtitle.BackgroundTransparency = 1
     AppSubtitle.Text = "v2.4.1"
     AppSubtitle.TextColor3 = THEMES[currentTheme].Text
     AppSubtitle.TextTransparency = 0.6
-    AppSubtitle.TextSize = 14
+    AppSubtitle.TextSize = 12
     AppSubtitle.Font = Enum.Font.Gotham
     AppSubtitle.TextXAlignment = Enum.TextXAlignment.Left
     AppSubtitle.Parent = AppHeader
@@ -294,7 +545,7 @@ function Library:CreateMainScreen()
     local TabContainer = Instance.new("ScrollingFrame")
     TabContainer.Name = "TabContainer"
     TabContainer.Size = UDim2.new(1, -10, 1, -180)
-    TabContainer.Position = UDim2.new(0, 10, 0, 110)
+    TabContainer.Position = UDim2.new(0, 10, 0, 90)
     TabContainer.BackgroundTransparency = 1
     TabContainer.BorderSizePixel = 0
     TabContainer.ScrollBarThickness = 0
@@ -310,8 +561,8 @@ function Library:CreateMainScreen()
     -- Content Area (bên phải)
     local ContentArea = Instance.new("Frame")
     ContentArea.Name = "ContentArea"
-    ContentArea.Size = UDim2.new(1, -230, 1, -20)
-    ContentArea.Position = UDim2.new(0, 230, 0, 10)
+    ContentArea.Size = UDim2.new(1, -230, 1, -80)
+    ContentArea.Position = UDim2.new(0, 230, 0, 70)
     ContentArea.BackgroundTransparency = 1
     ContentArea.Parent = MainFrame
     
@@ -325,7 +576,7 @@ function Library:CreateMainScreen()
     
     local ContentTitle = Instance.new("TextLabel")
     ContentTitle.Name = "ContentTitle"
-    ContentTitle.Size = UDim2.new(1, -40, 0, 40)
+    ContentTitle.Size = UDim2.new(1, -120, 0, 40)
     ContentTitle.Position = UDim2.new(0, 20, 0, 10)
     ContentTitle.BackgroundTransparency = 1
     ContentTitle.Text = "HOME"
@@ -337,7 +588,7 @@ function Library:CreateMainScreen()
     
     local ContentSubtitle = Instance.new("TextLabel")
     ContentSubtitle.Name = "ContentSubtitle"
-    ContentSubtitle.Size = UDim2.new(1, -40, 0, 24)
+    ContentSubtitle.Size = UDim2.new(1, -120, 0, 24)
     ContentSubtitle.Position = UDim2.new(0, 20, 0, 50)
     ContentSubtitle.BackgroundTransparency = 1
     ContentSubtitle.Text = "Welcome to FluentPlus Interface"
@@ -403,13 +654,13 @@ function Library:CreateMainScreen()
     ThemeButton.Font = Enum.Font.GothamMedium
     ThemeButton.Parent = ThemeContainer
     
-    -- Window Controls
+    -- Window Controls (trong TitleBar)
     local WindowControls = Instance.new("Frame")
     WindowControls.Name = "WindowControls"
     WindowControls.Size = UDim2.new(0, 80, 0, 30)
     WindowControls.Position = UDim2.new(1, -90, 0, 15)
     WindowControls.BackgroundTransparency = 1
-    WindowControls.Parent = ContentHeader
+    WindowControls.Parent = TitleBar
     
     local CloseButton = Instance.new("TextButton")
     CloseButton.Name = "CloseButton"
@@ -435,8 +686,8 @@ function Library:CreateMainScreen()
     MainFrame.Parent = ScreenGui
     ScreenGui.Parent = PlayerGui
 
-    -- Kích hoạt tính năng kéo cho MainFrame
-    enableDrag(MainFrame)
+    -- Kích hoạt tính năng kéo cho TitleBar
+    enableDrag(TitleBar)
     
     return {
         ScreenGui = ScreenGui,
@@ -446,7 +697,10 @@ function Library:CreateMainScreen()
         ContentSubtitle = ContentSubtitle,
         TabContainer = TabContainer,
         ThemeButton = ThemeButton,
-        ButtonsContainer = ButtonsContainer
+        ButtonsContainer = ButtonsContainer,
+        TitleBar = TitleBar,
+        MainTitle = MainTitle,
+        MainSubtitle = MainSubtitle
     }
 end
 
@@ -715,6 +969,9 @@ function Library:Init()
     self.TabContainer = mainScreen.TabContainer
     self.ThemeButton = mainScreen.ThemeButton
     self.ButtonsContainer = mainScreen.ButtonsContainer
+    self.TitleBar = mainScreen.TitleBar
+    self.MainTitle = mainScreen.MainTitle
+    self.MainSubtitle = mainScreen.MainSubtitle
     
     -- Tạo lại các tab button nếu có tab được tạo trước khi Init
     for _, tab in ipairs(tabs) do
@@ -735,6 +992,9 @@ function Library:Init()
         self:ThemeUpdate()
     end)
     
+    -- Tạo notification system
+    self:CreateNotificationSystem()
+    
     return self
 end
 
@@ -744,6 +1004,19 @@ function Library:ThemeUpdate()
     
     -- Main Frame
     self.MainFrame.BackgroundColor3 = theme.Background
+    
+    -- Title Bar
+    if self.TitleBar then
+        self.TitleBar.BackgroundColor3 = theme.Surface
+    end
+    
+    -- Main Title và Subtitle
+    if self.MainTitle then
+        self.MainTitle.TextColor3 = theme.Text
+    end
+    if self.MainSubtitle then
+        self.MainSubtitle.TextColor3 = theme.Text
+    end
     
     -- Navigation Pane
     local navigationPane = self.MainFrame:FindFirstChild("NavigationPane")
@@ -840,5 +1113,20 @@ end
 
 -- Tạo global Window object
 getgenv().Window = Window
+getgenv().Notify = function(options)
+    return Library:Notify(options)
+end
+getgenv().NotifySuccess = function(title, content, duration)
+    return Library:NotifySuccess(title, content, duration)
+end
+getgenv().NotifyWarning = function(title, content, duration)
+    return Library:NotifyWarning(title, content, duration)
+end
+getgenv().NotifyError = function(title, content, duration)
+    return Library:NotifyError(title, content, duration)
+end
+getgenv().NotifyInfo = function(title, content, duration)
+    return Library:NotifyInfo(title, content, duration)
+end
 
 return Library
